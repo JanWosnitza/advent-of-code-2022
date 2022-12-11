@@ -6,10 +6,6 @@ section Crate
   structure Crate where c : Char
   deriving Inhabited, Repr
 
-  def Crate.parse? : Char → Option Crate
-    | ' ' => none
-    | c => some {c := c}
-
   def Crate.unparse : Option Crate → Char
     | none => ' '
     | some crate => crate.c
@@ -52,21 +48,6 @@ section Stacks
     stacks
     |>.set sourceIdx (name₁, source)
     |>.set targetIdx (name₂, target)
-
-  def Stacks.parse! (ls:List String) : Stacks :=
-    ls
-    |>.reverse
-    |>.map String.toList
-    |>.transpose!
-    |>.enum
-    |>.filterMap (fun (n, cs) => if n % 4 == 1 then some cs else none)
-    |>.map (fun
-      | [] => panic! "invalid input"
-      | name :: crates => 
-        ( StackName.stackName s!"{name}"
-        , {crates := crates.reverse.filterMap Crate.parse?}
-        )
-    )
 end Stacks
 
 section Move
@@ -75,15 +56,6 @@ section Move
     source : StackName
     target : StackName
   deriving Inhabited, Repr
-
-  def Move.parse! (s:String) : Move :=
-    match s.splitOn " " with
-    | ["move", count, "from", sourceStack, "to", targetStack] =>
-      { count := count.toNat!
-      , source := StackName.stackName sourceStack
-      , target := StackName.stackName targetStack
-      }
-    | _ => panic! "invalid input"
 
   def Move.run1! (stacks:Stacks) (move:Move) : Stacks :=
     stacks
@@ -96,18 +68,51 @@ section Move
     stacks.update move.source move.target  (Stack.move! move.count)
 end Move
 
-def partX (moveRun) (ls:List String) :=
-  match ls.splitOn "" with
-  | [sStacks, sMoves] =>
-    let stacks := Stacks.parse! sStacks
-    let moves := sMoves |> List.map Move.parse!
+namespace Parse
+  def crate? : Char → Option Crate
+    | ' ' => none
+    | c => some {c := c}
 
-    moves
-    |>.foldl moveRun stacks
-    |>.map (Stack.top? ∘ Prod.snd)
-    |>.map Crate.unparse
-    |>.asString
-  | _ => "[invalid input]"
+  def stacks! (ls:List String) : Stacks :=
+    ls
+    |>.reverse
+    |>.map String.toList
+    |>.transpose!
+    |>.enum
+    |>.filterMap (fun (n, cs) => if n % 4 == 1 then some cs else none)
+    |>.map (fun
+      | [] => panic! "invalid input"
+      | name :: crates => 
+        ( StackName.stackName s!"{name}"
+        , {crates := crates.reverse.filterMap crate?}
+        )
+    )
+
+  def move! (s:String) : Move :=
+    match s.splitOn " " with
+    | ["move", count, "from", sourceStack, "to", targetStack] =>
+      { count := count.toNat!
+      , source := StackName.stackName sourceStack
+      , target := StackName.stackName targetStack
+      }
+    | _ => panic! "invalid input"
+
+  def input! (ls:List String) : Stacks × List Move :=
+    match ls.splitOn "" with
+    | [sStacks, sMoves] =>
+      ( Parse.stacks! sStacks
+      , sMoves |> List.map Parse.move!
+      )
+    | _ => panic! "invalid input"
+end Parse
+
+def partX (moveRun) (ls:List String) :=
+  let (stacks, moves) := Parse.input! ls
+  moves
+  |>.foldl moveRun stacks
+  |>.map (Stack.top? ∘ Prod.snd)
+  |>.map Crate.unparse
+  |>.asString
 
 def part1 (ls:List String) :=
   partX Move.run1! ls

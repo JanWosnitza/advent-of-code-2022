@@ -16,13 +16,6 @@ instance : Sub Vector where
 inductive Direction where | Right | Left | Up | Down
 deriving Inhabited, Repr
 
-def Direction.parse! : String → Direction
-  | "R" => Direction.Right
-  | "L" => Direction.Left
-  | "U" => Direction.Up
-  | "D" => Direction.Down
-  | _ => panic! "invalid input"
-
 def Direction.toVector : Direction → Vector
   | Right => ⟨1, 0⟩
   | Left => ⟨-1, 0⟩
@@ -33,14 +26,6 @@ structure Move where
   direction : Direction
   count : Nat
 deriving Inhabited, Repr
-
-def Move.parse! (s:String) : Move :=
-  match s.splitOn " " with
-  | [direction, count] =>
-    { direction := Direction.parse! direction
-    , count := count.toNat!
-    : Move}
-  | _ => panic! "invalid input"
 
 def updateKnot (head:Vector) (tail:Vector) : Vector :=
   let ⟨dx, dy⟩ := tail - head
@@ -79,9 +64,26 @@ def HT.moves (rope:Rope) (moves:List Move) : List Rope :=
   |> Prod.snd
   |>.reverse
 
+namespace Parse
+  def direction! : String → Direction
+    | "R" => Direction.Right
+    | "L" => Direction.Left
+    | "U" => Direction.Up
+    | "D" => Direction.Down
+    | _ => panic! "invalid input"
+
+  def move! (s:String) : Move :=
+    match s.splitOn " " with
+    | [direction, count] =>
+      { direction := direction! direction
+      , count := count.toNat!
+      : Move}
+    | _ => panic! "invalid input"
+end Parse
+
 def partX (knots) (ls:List String) :=
   ls
-  |>.map Move.parse!
+  |>.map Parse.move!
   |> HT.moves (Rope.zero knots)
   |>.map (List.getLast! ∘ Rope.knots)
   |>.eraseDups
@@ -116,7 +118,7 @@ def testInput₂ :=
   ]
 #eval 36 <== part2 testInput₂
 
-/-
+-- Visualization cod for "Lean Infoview" for debugging
 inductive Cell where
   | empty
   | set (n:Nat)
@@ -139,9 +141,9 @@ instance : Repr Grid where
     |> Std.Format.text
     |> Std.Format.fill
 
-def x (ls:List String) :=
+def debug (ls:List String) :=
   ls
-  |>.map Move.parse!
+  |>.map Parse.move!
   |> HT.moves (Rope.zero 10)
   |>.map (fun rope =>
     {cells :=
@@ -153,14 +155,12 @@ def x (ls:List String) :=
         |>.map (fun pos =>
           match rope.knots.findIndex? (·==pos) with
           | none => Cell.empty
-          | some x => Cell.set x -- Char.ofNat ('0'.toNat + x)
+          | some x => Cell.set x
         )
-        --|>.toString
       )
     : Grid}
   )
 
-#eval x testInput₁
--/
+--#eval debug testInput₁
 
 end Day9

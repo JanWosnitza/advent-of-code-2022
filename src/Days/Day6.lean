@@ -2,10 +2,17 @@ import LeanExt
 
 namespace Day6
 
+namespace Parse
+  def input! (ls:List String) : List Char :=
+    ls
+    |>.head!
+    |>.toList
+
+end Parse
+
 def partX (width:Nat) (ls:List String) :=
   ls
-  |>.head!
-  |>.toList
+  |> Parse.input!
   |>.windowed width
   |>.takeWhile (fun w => w.length ≠ w.eraseDups.length)
   |>.length

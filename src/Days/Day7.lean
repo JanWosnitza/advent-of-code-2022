@@ -10,18 +10,6 @@ structure File where
   size : Size
 deriving Repr
 
-def parseOutput! (path:Path) (files:List File) : List String → List File
-  | [] => files
-  | l :: ls =>
-    match l.splitOn " " with
-    | ["$", "cd", "/"] => parseOutput! [] files ls
-    | ["$", "cd", ".."] => parseOutput! (path.tail!) files ls
-    | ["$", "cd", dir] => parseOutput! (dir :: path) files ls
-    | ["$", "ls"] => parseOutput! path files ls -- 🤷
-    | ["dir", _] => parseOutput! path files ls  -- 🤷
-    | [size, file] => parseOutput! path ({path := file :: path, size := size.toNat!} :: files) ls
-    | o => panic! s!"unkown output: {o}"
-
 def extractDirectorySizes (fs:List File) :=
   fs
   |>.bind (fun file =>
@@ -35,9 +23,26 @@ def extractDirectorySizes (fs:List File) :=
   -- optional: convert into string path
   --|>.map (fun (path, size) => ("/" ++ (path.reverse |>.intersperse "/" |> String.join), size))
 
+namespace Parse
+  def input! (ls:List String) : List File :=
+    loop [] [] ls
+    where
+    loop (path:Path) (files:List File) : List String → List File
+    | [] => files
+    | l :: ls =>
+      match l.splitOn " " with
+      | ["$", "cd", "/"] => loop [] files ls
+      | ["$", "cd", ".."] => loop (path.tail!) files ls
+      | ["$", "cd", dir] => loop (dir :: path) files ls
+      | ["$", "ls"] => loop path files ls -- 🤷
+      | ["dir", _] => loop path files ls  -- 🤷
+      | [size, file] => loop path ({path := file :: path, size := size.toNat!} :: files) ls
+      | o => panic! s!"unkown output: {o}"
+end Parse
+
 def part1 (ls:List String) :=
   ls
-  |> parseOutput! [] []
+  |> Parse.input!
   |> extractDirectorySizes
   |>.filter (fun (_, size) => size <= 100000)
   |>.map (fun (_, size) => size)
@@ -46,7 +51,7 @@ def part1 (ls:List String) :=
 def part2 (ls:List String) :=
   let files :=
     ls
-    |> parseOutput! [] []
+    |> Parse.input!
   let fileSize := files.sumBy (fun x => x.size)
   let requiredSize := fileSize - (70000000 - 30000000)
 

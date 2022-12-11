@@ -20,15 +20,6 @@ def SectionRange.mk? (left:SectionId) (right:SectionId) : Option SectionRange :=
   else
     none
 
-def SectionRange.parse! (s:String) : SectionRange :=
-  s.splitOn "-"
-  |> List.filterMap String.toNat?
-  |> fun
-    | [left, right] =>
-      SectionRange.mk? left right
-      |>.get!
-    | _ => panic! "oups"
-
 def SectionRange.length (a:SectionRange) : Nat :=
   a.right - a.left + 1
 
@@ -45,21 +36,36 @@ structure ElvenPair where
   right : SectionRange
 deriving Inhabited, Repr
 
-def ElvenPair.parse! (s:String) : ElvenPair :=
-  s.splitOn ","
-  |> fun
-    | [left, right] => {left := SectionRange.parse! left, right := SectionRange.parse! right : ElvenPair}
-    | _ => panic! "oups"
+namespace Parse
+  def sectionRange! (s:String) : SectionRange :=
+    s.splitOn "-"
+    |> List.filterMap String.toNat?
+    |> fun
+      | [left, right] =>
+        SectionRange.mk? left right
+        |>.get!
+      | _ => panic! "oups"
+
+  def elvenPair! (s:String) : ElvenPair :=
+    s.splitOn ","
+    |> fun
+      | [left, right] => {left := sectionRange! left, right := sectionRange! right : ElvenPair}
+      | _ => panic! "oups"
+
+  def input! (ls:List String) : List ElvenPair :=
+    ls
+    |>.map elvenPair!
+end Parse
 
 def part1 (ls:List String) :=
   ls
-  |>.map ElvenPair.parse!
+  |> Parse.input!
   |>.filter (fun ep => ep.left.isSubset ep.right || ep.right.isSubset ep.left)
   |>.length
 
 def part2 (ls:List String) :=
   ls
-  |>.map ElvenPair.parse!
+  |> Parse.input!
   |>.filterMap (fun ep => ep.left.intersect? ep.right)
   |>.length
 

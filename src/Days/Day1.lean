@@ -4,31 +4,33 @@ namespace Day1
 
 abbrev Calories := Nat
 
-def Calories.parse! (s:String) := s.toNat!
-
 structure Elve where
   calories : List Calories
   deriving Repr
 
 def Elve.totalCalories (elve:Elve) := elve.calories.sum
 
-def Elve.parse! (ls:List String) :=
-  {calories := ls |> List.map Calories.parse! : Elve}
+namespace Parse
+  def calories! (s:String) := s.toNat!
 
-def parse! (lines:List String) :=
-  lines.splitOn ""
-  |> List.map Elve.parse!
+  def elve! (ls:List String) := 
+    {calories := ls |> List.map calories! : Elve}
+
+  def elveList! (lines:List String) :=
+    lines.splitOn ""
+    |> List.map elve!
+end Parse
 
 def part1 (input:List String) :=
   input
-  |> parse!
+  |> Parse.elveList!
   |> List.map Elve.totalCalories
   |> List.maximum?
   |> Option.get!
 
 def part2 (input:List String) :=
   input
-  |> parse!
+  |> Parse.elveList!
   |> List.map Elve.totalCalories
   |> List.sort
   |> List.reverse

@@ -21,12 +21,18 @@ def Rucksack.leftCompartment (r:Rucksack) : List Item :=
 def Rucksack.rightCompartment (r:Rucksack) : List Item :=
   r.items.drop (r.items.length / 2)
 
-def Rucksack.parse (l:String) : Rucksack :=
-  {items := l |>.toList |>.map Item.item}
+namespace Parse
+  def rucksack (l:String) : Rucksack :=
+    {items := l |>.toList |>.map Item.item}
 
-def part1 (lines:List String) :=
-  lines
-  |>.map Rucksack.parse
+  def input (ls:List String) : List Rucksack :=
+    ls
+    |>.map rucksack
+end Parse
+
+def part1 (ls:List String) :=
+  ls
+  |> Parse.input
   |>.map (fun r =>
     r.leftCompartment
     |>.keep r.rightCompartment
@@ -36,7 +42,7 @@ def part1 (lines:List String) :=
   |>.map Item.priority
   |>.sum
 
-def part2 (lines:List String) :=
+def part2 (ls:List String) :=
   let groupInto3 (rs:List _) :=
     rs
     |>.enum
@@ -44,8 +50,8 @@ def part2 (lines:List String) :=
     |>.groupBy (fun (group₁, _) (group₂, _) => group₁ == group₂)
     |>.map (List.map (fun (_, r) => r))
 
-  lines
-  |>.map Rucksack.parse
+  ls
+  |> Parse.input
   |> groupInto3
   |>.map (fun group =>
     group

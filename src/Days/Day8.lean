@@ -7,16 +7,6 @@ structure Tree where
   pos : Nat × Nat
 deriving Repr, Inhabited
 
-def Tree.parse! (ls:List String) : List (List Tree) :=
-  ls
-  |>.enum
-  |>.map (fun (x, l) =>
-    l.toList
-    |>.map (fun c => c.toNat - '0'.toNat)
-    |>.enum
-    |>.map (fun (y, size) => {size := size, pos := (x, y) :Tree})
-  )
-
 def Tree.visibleOutside : List Tree → List Tree
   | [] => []
   | t :: ts =>
@@ -29,9 +19,13 @@ def Tree.visibleOutside : List Tree → List Tree
         ts
     ts.reverse
 
-theorem Tree.visibleOutside_idempotent (ls:List Tree)
+theorem Tree.visibleOutside_idempotent {ls:List Tree}
   : Tree.visibleOutside ls = Tree.visibleOutside (Tree.visibleOutside ls) := by
-  sorry
+  simp [Tree.visibleOutside]
+  split
+  case h_1 => rfl
+  case h_2 =>
+    sorry
 
 def Tree.treeHouseVisible (acc:List (Tree × List Tree)) : List Tree → List (Tree × List Tree)
   | [] => acc.reverse
@@ -53,9 +47,21 @@ def Tree.allSides (tss:List (List Tree)) : List (List Tree) :=
   let bottom := top |>.map List.reverse
   [left, right, top, bottom].join
 
+namespace Parse
+  def tree! (ls:List String) : List (List Tree) :=
+    ls
+    |>.enum
+    |>.map (fun (x, l) =>
+      l.toList
+      |>.map (fun c => c.toNat - '0'.toNat)
+      |>.enum
+      |>.map (fun (y, size) => {size := size, pos := (x, y) :Tree})
+    )
+end Parse
+
 def part1 (ls:List String) :=
   ls
-  |> Tree.parse!
+  |> Parse.tree!
   |> Tree.allSides
   |>.map Tree.visibleOutside
   |>.join
@@ -65,7 +71,7 @@ def part1 (ls:List String) :=
 
 def part2 (ls:List String) :=
   ls
-  |> Tree.parse!
+  |> Parse.tree!
   |> Tree.allSides
   |>.bind (Tree.treeHouseVisible [])
   |>.groupByEx (fun (t, ts) => (t.pos, ts.length))

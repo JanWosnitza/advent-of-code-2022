@@ -4,13 +4,6 @@ namespace Day2
 
 inductive RPS where | rock | paper | scissors
 deriving Inhabited
-open RPS
-
-def RPS.parse! : String → RPS
-  | "A" | "X" => rock
-  | "B" | "Y" => paper
-  | "C" | "Z" => scissors
-  | _ => panic! "invalid input [they]"
 
 def RPS.points : RPS → Nat
   | rock => 1
@@ -19,14 +12,8 @@ def RPS.points : RPS → Nat
 
 inductive Result where | lose | draw | win
 deriving Inhabited
-open Result
 
-def Result.parse! : String → Result
-  | "X" => lose
-  | "Y" => draw
-  | "Z" => win
-  | _ => panic! "invalid input [they]"
-
+open RPS in
 def Result.of : RPS → RPS → Result
   | rock, scissors => lose
   | rock, rock => draw
@@ -40,6 +27,7 @@ def Result.of : RPS → RPS → Result
   | scissors, scissors => draw
   | scissors, rock => win
 
+open RPS in open Result in
 def Result.to : Result → RPS →RPS
   | lose, rock => scissors
   | lose, paper => rock
@@ -56,35 +44,55 @@ def Result.points : Result → Nat
   | draw => 3
   | win => 6
 
-def part1 (lines:List String) :=
-  lines
-  |>.map (fun l => l.split (' ' == ·))
-  |>.map (fun ls =>
-    match ls with
-    | [theyS, meS] =>
-      let they := RPS.parse! theyS
-      let me := RPS.parse! meS
-      let result := Result.of they me
-      (me, result)
-    | _ => panic! "invalid input"
-  )
+namespace Parse
+  def rps! : String → RPS
+    | "A" | "X" => RPS.rock
+    | "B" | "Y" => RPS.paper
+    | "C" | "Z" => RPS.scissors
+    | _ => panic! "invalid input [they]"
+
+  def result! : String → Result
+    | "X" => Result.lose
+    | "Y" => Result.draw
+    | "Z" => Result.win
+    | _ => panic! "invalid input [they]"
+
+  def input! [Inhabited α] [Inhabited β] (fLeft:String → α) (fRight:String → β) (ls:List String) : List (α × β) :=
+    ls
+    |>.map (fun l => l.split (' ' == ·))
+    |>.map (fun ls =>
+      match ls with
+      | [sLeft, sRight] => (fLeft sLeft, fRight sRight)
+      | _ => panic! "invalid input"
+    )
+
+  def input1! (ls:List String) := input! rps! rps! ls
+
+  def input2! (ls:List String) := input! rps! result! ls
+end Parse
+
+def score (mrs:List (RPS × Result)) :Nat :=
+  mrs
   |>.map (fun (me, result) => me.points + result.points)
   |>.sum
 
-def part2 (lines:List String) :=
-  lines
-  |>.map (fun l => l.split (' ' == ·))
-  |>.map (fun ls =>
-    match ls with
-    | [theyS, meS] =>
-      let they := RPS.parse! theyS
-      let result := Result.parse! meS
-      let me := result.to they
+def part1 (ls:List String) :=
+  ls
+  |> Parse.input1!
+  |>.map (fun (they, me) =>
+      let result := Result.of they me
       (me, result)
-    | _ => panic! "invalid input"
   )
-  |>.map (fun (me, result) => me.points + result.points)
-  |>.sum
+  |> score
+
+def part2 (ls:List String) :=
+  ls
+  |> Parse.input2!
+  |>.map (fun (they, result) =>
+    let me := result.to they
+    (me, result)
+  )
+  |> score
 
 def testInput :=
   [ "A Y"

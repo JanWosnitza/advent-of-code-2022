@@ -7,12 +7,6 @@ inductive Instruction where
   | addx : Int → Instruction
 deriving Inhabited, Repr
 
-def Instruction.parse! (s:String) : Instruction :=
-  match s.splitOn " " with
-  | ["noop"] => noop
-  | ["addx", sv] => addx (sv.toInt!)
-  | _ => panic! "unknown instruction"
-
 abbrev Cycle := Nat
 
 structure CPU where
@@ -34,9 +28,21 @@ def CPU.execs (cpu:CPU) (history:List CPU) : List Instruction → CPU × List CP
     let (cycles, cpu₁) := cpu.exec i
     execs cpu₁ (List.replicate cycles cpu ++ history) is
 
+namespace Parse
+  def instruction! (s:String) : Instruction :=
+    match s.splitOn " " with
+    | ["noop"] => Instruction.noop
+    | ["addx", sv] => Instruction.addx (sv.toInt!)
+    | _ => panic! "unknown instruction"
+
+  def input! (ls:List String) : List Instruction :=
+    ls
+    |>.map instruction!
+end Parse
+
 def part1 (ls:List String) :=
   ls
-  |>.map Instruction.parse!
+  |> Parse.input!
   |> CPU.execs CPU.initial []
   |> Prod.snd
   |>.enum
@@ -47,7 +53,7 @@ def part1 (ls:List String) :=
 
 def part2 (ls:List String) :=
   ls
-  |>.map Instruction.parse!
+  |> Parse.input!
   |> CPU.execs CPU.initial []
   |> Prod.snd
   |>.enum
