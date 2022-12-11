@@ -33,7 +33,7 @@ namespace List
 
   theorem sum_sums (n:Nat) (ns:List Nat) : sum (n :: ns) = n + sum ns := by rfl
 
-  theorem filter_size (ls:List α) (f:α → Bool) : (ls.filter f).length <= ls.length := by
+  theorem filter_eq_length (ls:List α) (f:α → Bool) : (ls.filter f).length <= ls.length := by
     cases ls
     case nil => simp [List.filter]
     case cons =>
@@ -41,10 +41,10 @@ namespace List
       split
       case h_1 =>
         apply Nat.add_le_add_right
-        simp [filter_size]
+        simp [filter_eq_length]
       case h_2 =>
         apply Nat.le_step
-        simp [filter_size]
+        simp [filter_eq_length]
 
   def sortBy_Filter [LT β] [DecidableRel (@LT.lt β _)] (selector:α → β) (ls:List α) :=
     match ls with
@@ -62,7 +62,7 @@ namespace List
   decreasing_by
     simp_wf
     apply Nat.lt_succ_of_le
-    simp [filter_size]
+    simp [filter_eq_length]
 
   theorem partitionAux_length (f:α → Bool) (ls left right:List α)
     : (ls.partitionAux f (left, right)).1.length + (ls.partitionAux f (left, right)).2.length = ls.length + left.length + right.length
@@ -89,7 +89,7 @@ namespace List
         rw [this]
         apply partitionAux_length
 
-  theorem partition_size {f:α → Bool} {ls:List α}
+  theorem partition_eq_length {f:α → Bool} {ls:List α}
     : (ls.partition f).1.length + (ls.partition f).2.length = ls.length
     := by
     simp [List.partition]
@@ -97,16 +97,16 @@ namespace List
     rw [this]
     exact partitionAux_length f ls [] []
 
-  theorem partition_fst_size {f:α → Bool} {ls:List α}
+  theorem partition_fst_length {f:α → Bool} {ls:List α}
     : (ls.partition f).1.length ≤ ls.length
     := by
-    have : (ls.partition f).1.length + (ls.partition f).2.length = ls.length := partition_size
+    have : (ls.partition f).1.length + (ls.partition f).2.length = ls.length := partition_eq_length
     apply Nat.le.intro this
 
-  theorem partition_snd_size {f:α → Bool} {ls:List α}
+  theorem partition_snd_length {f:α → Bool} {ls:List α}
     : (ls.partition f).2.length ≤ ls.length
     := by
-    have : (ls.partition f).1.length + (ls.partition f).2.length = ls.length := partition_size
+    have : (ls.partition f).1.length + (ls.partition f).2.length = ls.length := partition_eq_length
     rw [Nat.add_comm] at this
     apply Nat.le.intro this
 
@@ -124,7 +124,7 @@ namespace List
   decreasing_by
     simp_wf
     apply Nat.lt_succ_of_le
-    simp [partition_fst_size, partition_snd_size]
+    simp [partition_fst_length, partition_snd_length]
 
   def sort [LT α] [DecidableRel (@LT.lt α _)] (ls:List α) := ls.sortBy_Filter id
 

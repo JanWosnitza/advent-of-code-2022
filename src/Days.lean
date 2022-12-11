@@ -8,6 +8,7 @@ import Days.Day7
 import Days.Day8
 import Days.Day9
 import Days.Day10
+import Days.Day11
 
 structure Solution where
   day : Nat
@@ -48,4 +49,6 @@ def days : List Solution :=
   , solution 9 2 Day9.part2
   , solution 10 1 Day10.part1
   , solution 10 2 Day10.part2
+  , solution 11 1 Day11.part1
+  , solution 11 2 Day11.part2
   ]

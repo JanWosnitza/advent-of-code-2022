@@ -7,7 +7,9 @@
             "label": "Build",
             "type": "shell",
             "command": "lake",
-            "args": ["build"],
+            "args": [
+                "build"
+            ],
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -17,7 +19,10 @@
             },
             "problemMatcher": {
                 "owner": "lean4",
-                "fileLocation": ["relative", "${workspaceFolder}"],
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}"
+                ],
                 "pattern": {
                     "regexp": "^\\.\\\\\\.\\\\\\.\\\\(.*):(\\d+):(\\d+):\\s+(info|warning|error):\\s+(.*)$",
                     "file": 2,
@@ -32,10 +37,13 @@
             "label": "Run",
             "type": "shell",
             "command": "${workspaceFolder}/build/bin/aoc.exe",
-            "dependsOn": ["Build"],
+            "dependsOn": [
+                "Build"
+            ],
             "presentation": {
                 "reveal": "always"
-            }
+            },
+            "problemMatcher": []
         }
     ]
 }
