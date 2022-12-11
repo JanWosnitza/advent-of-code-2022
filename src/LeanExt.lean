@@ -217,6 +217,69 @@ namespace List
     | _, gs => gs.map List.reverse |>.reverse
 
   #eval [0, 1, 2, 3].groupByFixed (fun a b => a/2 == b/2) == [[0,1],[2,3]]
+
+  theorem reverseAux_ne_nil_right {ls:List α} {rs:List α} (ne_nil:rs≠[])
+    : List.reverseAux ls rs ≠ []
+    := by
+    cases ls
+    case nil => exact ne_nil
+    case cons => simp [List.reverseAux, reverseAux_ne_nil_right]
+
+  theorem reverseAux_ne_nil_left {ls:List α} {rs:List α} (ne_nil:ls≠[])
+    : List.reverseAux ls rs ≠ []
+    := by
+    cases ls
+    case nil => contradiction
+    case cons => simp [List.reverseAux, reverseAux_ne_nil_right]
+
+  @[simp] theorem reverse_ne_nil {ls:List α} (ne_nil:ls≠[])
+    : ls.reverse ≠ []
+    := by
+    simp [List.reverse]
+    intro h
+    have : List.reverseAux ls [] ≠ [] := by simp [List.reverseAux_ne_nil_left ne_nil]
+    contradiction
+
+  @[simp] theorem concat_ne_nil {l:α} {ls:List α}
+    : ls.concat l ≠ []
+    := by cases ls <;> simp [List.concat]
+
+  @[simp] theorem getLast_cons {l:α} {ls:List α} (ne_nil:ls ≠ [])
+    : (l :: ls).getLast (by simp) = ls.getLast ne_nil
+    := by
+    cases ls
+    case nil => contradiction
+    case cons => simp [List.getLast]
+
+  theorem getLast_concat {l:α} {ls:List α}
+    : (ls.concat l).getLast (by simp [List.concat_ne_nil]) = l
+    := by
+    cases ls
+    case nil => simp [List.getLast]
+    case cons head tail =>
+      unfold List.concat
+      rw [List.getLast_cons, getLast_concat]
+
+  @[simp] theorem append_ne_nil_right {ls:List α} {rs:List α} (ne_nil:rs≠[])
+    : ls ++ rs ≠ []
+    := by
+    cases ls
+    case nil => assumption
+    case cons => simp [List.append]
+
+  @[simp] theorem append_ne_nil_left {ls:List α} {rs:List α} (ne_nil:ls≠[])
+    : ls ++ rs ≠ []
+    := by
+    cases rs
+    case nil => simp; exact ne_nil
+    case cons head tail => simp [append_ne_nil_right]
+
+  @[simp] theorem getLast_append (ls:List α) {rs:List α} (ne_nil:rs≠[])
+    : (ls ++ rs).getLast (by simp [ne_nil]) = rs.getLast ne_nil
+    := by
+    cases ls
+    case nil => simp [List.getLast]
+    case cons head tail => simp [List.getLast_cons, getLast_append, ne_nil]
 end List
 
 namespace Option

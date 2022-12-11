@@ -8,6 +8,7 @@
 * apply f
 * rfl
 * have name : h := ...
+* suffices
 * rw
 * erw
 * simp
@@ -16,6 +17,10 @@
 * first
 * constructor
 * focus [tactics]
+* next
+* unfold !!!!
+
+all tactics in "src\lean\init\tactics.lean"
 
 ## Termination
 ```
