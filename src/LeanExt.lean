@@ -182,6 +182,10 @@ namespace List
           loop (idx + 1) xs
     loop 0 ls
 
+   theorem length_ne_zero {ls:List α}
+    : ∀ h: ls.length ≠ 0, ls ≠ []
+    := by cases ls <;> simp [List.length]
+
    theorem length_lt_ne_nil {n:Nat} {ls:List α}
     : ∀ _: n < ls.length, ls ≠ []
     := by
@@ -293,22 +297,25 @@ namespace List
   def windowed (width:Nat) : List α → List (List α)
     | [] => []
     | ls =>
-      if hZero: 0 < width then
-        if hWidth:width <= ls.length then
-          loop ls width hZero hWidth []
-        else
-          [ls]
-      else
-        []
+      if hWidth:width <= ls.length
+      then loop ls width hWidth
+      else []
     where
-    loop (ls:List α) (width:Nat) (hZero:0 < width) (hWidth:width <= ls.length) (acc:List (List α)) : List (List α) :=
-      let ls_ne_nil : ls ≠ nil := List.length_lt_ne_nil (Nat.lt_of_lt_of_le hZero hWidth)
-      let tail := ls.tail ls_ne_nil
-      if h₂:width <= tail.length then
-        loop tail width hZero h₂ (ls.take width :: acc)
+    loop (ls:List α) (width:Nat) (hWidth:width <= ls.length) : List (List α) :=
+      if zero:length ls = 0 then
+        let _zero_width_branch
+          : 0 = width
+          := by
+          simp [zero] at hWidth
+          exact Eq.symm hWidth
+        []
       else
-        (ls :: acc).reverse
-  termination_by loop ls _ _ _ _ => ls.length
+        let ne_nil:ls ≠ [] := List.length_ne_zero zero
+        let tail := ls.tail ne_nil
+        if h₂:width <= tail.length
+        then ls.take width :: loop tail width h₂
+        else []
+  termination_by loop ls _ _ _ => ls.length
   decreasing_by
     simp_wf
     cases ls
