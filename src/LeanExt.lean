@@ -297,24 +297,21 @@ namespace List
   def windowed (width:Nat) : List α → List (List α)
     | [] => []
     | ls =>
-      if hWidth:width <= ls.length
-      then loop ls width hWidth
-      else []
+      if minLength:width <= ls.length
+      then loop ls width minLength
+      else [] -- no window of requested width possible
     where
-    loop (ls:List α) (width:Nat) (hWidth:width <= ls.length) : List (List α) :=
+    loop (ls:List α) (width:Nat) (minLength:width <= ls.length) : List (List α) :=
       if zero:length ls = 0 then
-        let _zero_width_branch
-          : 0 = width
-          := by
-          simp [zero] at hWidth
-          exact Eq.symm hWidth
+        let _width_zero_branch : 0 = width := by
+          simp [zero] at minLength; exact Eq.symm minLength
         []
       else
         let ne_nil:ls ≠ [] := List.length_ne_zero zero
         let tail := ls.tail ne_nil
         if h₂:width <= tail.length
         then ls.take width :: loop tail width h₂
-        else []
+        else [ls] -- ok, proven by minLength
   termination_by loop ls _ _ _ => ls.length
   decreasing_by
     simp_wf
@@ -322,6 +319,7 @@ namespace List
     case nil => contradiction
     case cons => simp [Nat.succ_eq_add_one, Nat.add_sub_cancel, Nat.lt_succ_of_le]
 
+  #eval windowed 0 [0, 1, 2] == [[], [], []]
   #eval windowed 3 [1, 2, 3, 4, 5] == [[1, 2, 3], [2, 3, 4], [3, 4, 5]]
 end List
 
