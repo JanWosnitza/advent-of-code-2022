@@ -24,6 +24,12 @@ section Test
   infix:50 " <== " => Test.get
 end Test
 
+namespace Nat
+  @[simp] theorem zero_lt_succ_succ {n:Nat}
+    : (0 < Nat.succ (Nat.succ n)) = (0 < Nat.succ n)
+    := by cases n <;> simp [Nat.zero_lt_succ]
+end Nat
+
 namespace List
   def sum [inhab:Inhabited α] [Add α] : List α → α
     | [] => inhab.default
@@ -33,18 +39,11 @@ namespace List
 
   theorem sum_sums (n:Nat) (ns:List Nat) : sum (n :: ns) = n + sum ns := by rfl
 
-  theorem filter_eq_length (ls:List α) (f:α → Bool) : (ls.filter f).length <= ls.length := by
-    cases ls
-    case nil => simp [List.filter]
-    case cons =>
-      simp [List.filter]
-      split
-      case h_1 =>
-        apply Nat.add_le_add_right
-        simp [filter_eq_length]
-      case h_2 =>
-        apply Nat.le_step
-        simp [filter_eq_length]
+  theorem filter_le_length (ls:List α) (f:α → Bool) : (ls.filter f).length ≤ ls.length := by
+    cases ls <;> simp [List.filter]
+    split
+    case h_1 => apply Nat.add_le_add_right; apply filter_le_length
+    case h_2 => apply Nat.le_step; apply filter_le_length
 
   def sortBy_Filter [LT β] [DecidableRel (@LT.lt β _)] (selector:α → β) (ls:List α) :=
     match ls with
@@ -59,10 +58,7 @@ namespace List
       let leftSorted := left.sortBy_Filter selector
       leftSorted ++ x :: rightSorted
   termination_by sortBy_Filter _ ls => ls.length
-  decreasing_by
-    simp_wf
-    apply Nat.lt_succ_of_le
-    simp [filter_eq_length]
+  decreasing_by simp_wf; apply Nat.lt_succ_of_le <;> apply filter_le_length
 
   theorem partitionAux_length (f:α → Bool) (ls left right:List α)
     : (ls.partitionAux f (left, right)).1.length + (ls.partitionAux f (left, right)).2.length = ls.length + left.length + right.length
@@ -92,23 +88,21 @@ namespace List
   theorem partition_eq_length {f:α → Bool} {ls:List α}
     : (ls.partition f).1.length + (ls.partition f).2.length = ls.length
     := by
-    simp [List.partition]
-    have : length ls = length ls + length ([]:List α) + length ([]:List α) := by rfl
-    rw [this]
+    rw [List.partition]
     exact partitionAux_length f ls [] []
 
-  theorem partition_fst_length {f:α → Bool} {ls:List α}
+  theorem partition_fst_length_le {f:α → Bool} {ls:List α}
     : (ls.partition f).1.length ≤ ls.length
     := by
-    have : (ls.partition f).1.length + (ls.partition f).2.length = ls.length := partition_eq_length
-    apply Nat.le.intro this
+    apply Nat.le.intro
+    exact partition_eq_length
 
-  theorem partition_snd_length {f:α → Bool} {ls:List α}
+  theorem partition_snd_length_le {f:α → Bool} {ls:List α}
     : (ls.partition f).2.length ≤ ls.length
     := by
-    have : (ls.partition f).1.length + (ls.partition f).2.length = ls.length := partition_eq_length
-    rw [Nat.add_comm] at this
-    apply Nat.le.intro this
+    apply Nat.le.intro
+    rw [Nat.add_comm]
+    exact partition_eq_length
 
   def sortBy [LT β] [DecidableRel (@LT.lt β _)] (selector:α → β) (ls:List α) :=
     match ls with
@@ -121,10 +115,7 @@ namespace List
       let rightSorted := split.2.sortBy selector
       leftSorted ++ x :: rightSorted
   termination_by sortBy _ ls => ls.length
-  decreasing_by
-    simp_wf
-    apply Nat.lt_succ_of_le
-    simp [partition_fst_length, partition_snd_length]
+  decreasing_by simp_wf; apply Nat.lt_succ_of_le; simp [partition_fst_length_le, partition_snd_length_le]
 
   def sort [LT α] [DecidableRel (@LT.lt α _)] (ls:List α) := ls.sortBy_Filter id
 
@@ -146,10 +137,10 @@ namespace List
 
   #eval ["1","","2"].splitOn "" == [["1"], ["2"]]
 
-  def keep [BEq α] (left:List α) (right:List α) :=
+  def intersect [BEq α] (left:List α) (right:List α) :=
     left |> List.filter right.contains
 
-  #eval [0, 1, 2].keep [2, 3, 4] == [2]
+  #eval [0, 1, 2].intersect [2, 3, 4] == [2]
 
   def reducel! [Inhabited α] : (α → α → α) → List α → α
     | reducer, x :: xs =>
@@ -172,6 +163,15 @@ namespace List
   def tail : (as : List α) → as ≠ [] → List α
     | _::as, _ => as
 
+  @[simp] theorem tail_length {ls:List α} (ne_nil: ls ≠ [])
+    : (ls.tail ne_nil).length = ls.length - 1
+    := by
+    cases ls
+    case nil => contradiction
+    case cons =>
+      simp [List.tail]
+      simp [Nat.succ_eq_add_one, Nat.add_sub_cancel]
+
   def findIndex? (isEq:α → Bool) (ls:List α) :=
     let rec loop idx : List α -> Option Nat
       | [] => none
@@ -182,18 +182,19 @@ namespace List
           loop (idx + 1) xs
     loop 0 ls
 
-  -- improve with proofs
-  def windowedAux (ls:List α) (width:Nat) (acc:List (List α)) : List (List α) :=
-    if width <= ls.length then
-      windowedAux ls.tail! width (ls.take width :: acc)
-    else
-      acc.reverse
-  decreasing_by sorry -- obviously todo
-  
-  def windowed (width:Nat) (ls:List α) :=
-    windowedAux ls width []
+   theorem length_lt_ne_nil {n:Nat} {ls:List α}
+    : ∀ _: n < ls.length, ls ≠ []
+    := by
+    cases ls
+    case nil => intro h; contradiction
+    case cons => simp
 
-  #eval windowed 3 [1, 2, 3, 4, 5]
+  theorem length_gt_ne_nil {n:Nat} {ls:List α}
+    : ∀ _: ls.length > n, ls ≠ []
+    := by
+    cases ls
+    case nil => intro h; contradiction
+    case cons => simp
 
   @[specialize] def groupByFixed (R : α → α → Bool) : List α → List (List α)
     | []    => []
@@ -232,7 +233,7 @@ namespace List
     case nil => contradiction
     case cons => simp [List.reverseAux, reverseAux_ne_nil_right]
 
-  @[simp] theorem reverse_ne_nil {ls:List α} (ne_nil:ls≠[])
+  theorem reverse_ne_nil {ls:List α} (ne_nil:ls≠[])
     : ls.reverse ≠ []
     := by
     simp [List.reverse]
@@ -240,7 +241,7 @@ namespace List
     have : List.reverseAux ls [] ≠ [] := by simp [List.reverseAux_ne_nil_left ne_nil]
     contradiction
 
-  @[simp] theorem concat_ne_nil {l:α} {ls:List α}
+  theorem concat_ne_nil {l:α} {ls:List α}
     : ls.concat l ≠ []
     := by cases ls <;> simp [List.concat]
 
@@ -251,7 +252,7 @@ namespace List
     case nil => contradiction
     case cons => simp [List.getLast]
 
-  theorem getLast_concat {l:α} {ls:List α}
+  @[simp] theorem getLast_concat {l:α} {ls:List α}
     : (ls.concat l).getLast (by simp [List.concat_ne_nil]) = l
     := by
     cases ls
@@ -260,14 +261,14 @@ namespace List
       unfold List.concat
       rw [List.getLast_cons, getLast_concat]
 
-  @[simp] theorem append_ne_nil_right {ls:List α} {rs:List α} (ne_nil:rs≠[])
+  theorem append_ne_nil_right {ls:List α} {rs:List α} (ne_nil:rs≠[])
     : ls ++ rs ≠ []
     := by
     cases ls
     case nil => assumption
     case cons => simp [List.append]
 
-  @[simp] theorem append_ne_nil_left {ls:List α} {rs:List α} (ne_nil:ls≠[])
+  theorem append_ne_nil_left {ls:List α} {rs:List α} (ne_nil:ls≠[])
     : ls ++ rs ≠ []
     := by
     cases rs
@@ -275,11 +276,46 @@ namespace List
     case cons head tail => simp [append_ne_nil_right]
 
   @[simp] theorem getLast_append (ls:List α) {rs:List α} (ne_nil:rs≠[])
-    : (ls ++ rs).getLast (by simp [ne_nil]) = rs.getLast ne_nil
+    : (ls ++ rs).getLast (by simp [List.append_ne_nil_right, ne_nil]) = rs.getLast ne_nil
     := by
     cases ls
     case nil => simp [List.getLast]
-    case cons head tail => simp [List.getLast_cons, getLast_append, ne_nil]
+    case cons head tail => simp [getLast_append, List.append_ne_nil_right, ne_nil]
+
+  theorem succ_gt_zero {n:Nat}
+    : Nat.succ n > 0
+    := by
+      cases n
+      case zero => simp
+      case succ =>
+        simp [succ_gt_zero]
+
+  def windowed (width:Nat) : List α → List (List α)
+    | [] => []
+    | ls =>
+      if hZero: 0 < width then
+        if hWidth:width <= ls.length then
+          loop ls width hZero hWidth []
+        else
+          [ls]
+      else
+        []
+    where
+    loop (ls:List α) (width:Nat) (hZero:0 < width) (hWidth:width <= ls.length) (acc:List (List α)) : List (List α) :=
+      let ls_ne_nil : ls ≠ nil := List.length_lt_ne_nil (Nat.lt_of_lt_of_le hZero hWidth)
+      let tail := ls.tail ls_ne_nil
+      if h₂:width <= tail.length then
+        loop tail width hZero h₂ (ls.take width :: acc)
+      else
+        (ls :: acc).reverse
+  termination_by loop ls _ _ _ _ => ls.length
+  decreasing_by
+    simp_wf
+    cases ls
+    case nil => contradiction
+    case cons => simp [Nat.succ_eq_add_one, Nat.add_sub_cancel, Nat.lt_succ_of_le]
+
+  #eval windowed 3 [1, 2, 3, 4, 5] == [[1, 2, 3], [2, 3, 4], [3, 4, 5]]
 end List
 
 namespace Option

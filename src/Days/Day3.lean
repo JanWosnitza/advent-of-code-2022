@@ -35,7 +35,7 @@ def part1 (ls:List String) :=
   |> Parse.input
   |>.map (fun r =>
     r.leftCompartment
-    |>.keep r.rightCompartment
+    |>.intersect r.rightCompartment
     |>.eraseDups
   )
   |>.join
@@ -56,7 +56,7 @@ def part2 (ls:List String) :=
   |>.map (fun group =>
     group
     |>.map Rucksack.items
-    |>.reducel! List.keep
+    |>.reducel! List.intersect
     |>.eraseDups
   )
   |>.join
