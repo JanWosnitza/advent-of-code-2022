@@ -10,22 +10,28 @@ deriving Repr, Inhabited
 def Tree.visibleOutside : List Tree → List Tree
   | [] => []
   | t :: ts =>
-    let (_, ts) :=
-      List.foldl
-        (fun (tMax, ts) (t:Tree) =>
-          if t.size > tMax then (t.size, t :: ts) else (tMax, ts)
-        )
-        (t.size, [t])
-        ts
-    ts.reverse
+    t :: loop t ts
+  where
+  loop (tMax:Tree) : List Tree → List Tree
+    | [] => []
+    | t :: ts =>
+      if t.size > tMax.size
+      then t :: loop t ts
+      else loop tMax ts
 
-theorem Tree.visibleOutside_idempotent {ls:List Tree}
-  : Tree.visibleOutside ls = Tree.visibleOutside (Tree.visibleOutside ls) := by
-  simp [Tree.visibleOutside]
-  split
-  case h_1 => rfl
-  case h_2 =>
-    sorry
+theorem Tree.visibleOutside.loop_idempotent {t:Tree} {ts:List Tree}
+  : visibleOutside.loop t ts = visibleOutside.loop t (visibleOutside.loop t ts)
+  := by
+  cases ts <;> simp [loop]
+  simp [loop]
+  split <;> simp [loop, *] <;> apply loop_idempotent
+
+theorem Tree.visibleOutside_idempotent {ts:List Tree}
+  : Tree.visibleOutside ts = Tree.visibleOutside (Tree.visibleOutside ts)
+  := by
+  cases ts <;> simp [visibleOutside]
+  apply Tree.visibleOutside.loop_idempotent
+  -- 🎉 finally, just took a rewrite of Tree.visibleOutside
 
 def Tree.treeHouseVisible (acc:List (Tree × List Tree)) : List Tree → List (Tree × List Tree)
   | [] => acc.reverse
