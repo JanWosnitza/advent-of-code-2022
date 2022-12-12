@@ -195,17 +195,6 @@ namespace List
 
   #eval windowed 3 [1, 2, 3, 4, 5]
 
-  def groupByEx [Inhabited (β × γ)] [BEq β] [LT β] [DecidableRel (@LT.lt β _)] (get:α → β × γ) (ls:List α) : List (β × List γ) :=
-    ls
-    |>.map get
-    |>.sortBy (fun x => x.1)
-    |>.groupBy (fun x y => x.1 == y.1)
-    |>.map (fun xs => (xs[0]!.1, xs.map (fun x => x.2) |>.reverse))
-
-  #eval [("a", 1), ("a", 2), ("b", 3)].groupByEx id = [("a", [1, 2]), ("b", [3])]
-  #eval [(["a"], 1), (["a"], 2), (["b"], 3)].groupByEx id = [(["a"], [1, 2]), (["b"], [3])]
-  #eval [([], 1), (["b", "a"], 3), (["a"], 2), (["b", "a"], 4)].groupByEx id = [([], [1]), (["a"], [2]), (["b", "a"], [3, 4])]
-
   @[specialize] def groupByFixed (R : α → α → Bool) : List α → List (List α)
     | []    => []
     | a::as => loop as [[a]]
@@ -217,6 +206,17 @@ namespace List
     | _, gs => gs.map List.reverse |>.reverse
 
   #eval [0, 1, 2, 3].groupByFixed (fun a b => a/2 == b/2) == [[0,1],[2,3]]
+
+  def groupByEx [Inhabited (β × γ)] [BEq β] [LT β] [DecidableRel (@LT.lt β _)] (get:α → β × γ) (ls:List α) : List (β × List γ) :=
+    ls
+    |>.map get
+    |>.sortBy (fun x => x.1)
+    |>.groupByFixed (fun x y => x.1 == y.1)
+    |>.map (fun xs => (xs[0]!.1, xs.map Prod.snd))
+
+  #eval [("a", 1), ("a", 2), ("b", 3)].groupByEx id = [("a", [1, 2]), ("b", [3])]
+  #eval [(["a"], 1), (["a"], 2), (["b"], 3)].groupByEx id = [(["a"], [1, 2]), (["b"], [3])]
+  #eval [([], 1), (["b", "a"], 3), (["a"], 2), (["b", "a"], 4)].groupByEx id = [([], [1]), (["a"], [2]), (["b", "a"], [3, 4])]
 
   theorem reverseAux_ne_nil_right {ls:List α} {rs:List α} (ne_nil:rs≠[])
     : List.reverseAux ls rs ≠ []
