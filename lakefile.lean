@@ -17,6 +17,7 @@ lean_lib Days.Day9
 lean_lib Days.Day10
 lean_lib Days.Day11
 lean_lib Days.Day12
+lean_lib Days.Day13
 lean_lib Days
 
 @[defaultTarget]
