@@ -1,3 +1,8 @@
+# Files defining tactis
+
+* src\lean\init\tactics.lean
+* src\lean\init\meta.lean
+
 # List of tactics I've found so far.
 
 * split (if & match)
@@ -19,8 +24,6 @@
 * focus [tactics]
 * next
 * unfold !!!!
-
-all tactics in "src\lean\init\tactics.lean"
 
 ## Termination
 ```

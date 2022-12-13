@@ -31,15 +31,18 @@ namespace Nat
 end Nat
 
 namespace List
-  def sum [inhab:Inhabited α] [Add α] : List α → α
+  def sumBy [inhab:Inhabited β] [Add β] (f:α → β) : List α → β
     | [] => inhab.default
-    | x :: xs => Add.add x (sum xs)
+    | x :: xs => Add.add (f x) (sumBy f xs)
 
-  def sumBy (f:α → Nat) := sum ∘ List.map f
+  def sum [Inhabited α] [Add α] : List α → α := sumBy id
 
-  theorem sum_sums (n:Nat) (ns:List Nat) : sum (n :: ns) = n + sum ns := by rfl
+  theorem sum_nil [inhab:Inhabited α] [Add α] : sum ([]:List α) = default := by rfl
+  theorem sum_add_head (n:Nat) (ns:List Nat) : sum (n :: ns) = n + sum ns := by rfl
 
-  theorem filter_le_length (ls:List α) (f:α → Bool) : (ls.filter f).length ≤ ls.length := by
+  theorem filter_le_length (ls:List α) (f:α → Bool)
+    : (ls.filter f).length ≤ ls.length
+    := by
     cases ls <;> simp [List.filter]
     split
     case h_1 => apply Nat.add_le_add_right; apply filter_le_length
@@ -65,10 +68,10 @@ namespace List
     := by
     cases ls
     case nil => simp [List.partitionAux]
-    case cons =>
+    case cons head tail =>
       simp [List.partitionAux]
       split
-      case h_1 head tail _ _ =>
+      case h_1 =>
         have : Nat.succ (length tail) + length left + length right
                = length tail + Nat.succ (length left) + length right
           := by simp [Nat.add_succ, Nat.add_comm]
@@ -76,7 +79,7 @@ namespace List
         have : Nat.succ (length left) = length (head :: left) := by rfl
         rw [this]
         apply partitionAux_length
-      case h_2 head tail _ _ =>
+      case h_2 =>
         have : Nat.succ (length tail) + length left + length right
                = length tail + length left + Nat.succ (length right)
           := by simp [Nat.add_succ, Nat.add_comm]
@@ -104,20 +107,20 @@ namespace List
     rw [Nat.add_comm]
     exact partition_eq_length
 
-  def sortBy [LT β] [DecidableRel (@LT.lt β _)] (selector:α → β) (ls:List α) :=
+  def sortBy [Ord β] (selector:α → β) (ls:List α) :=
     match ls with
     | [] => []
     | [x] => [x]
     | x :: xs =>
       let sx := selector x
-      let split := xs.partition (fun y => sx > selector y)
+      let split := xs.partition (fun y => Ord.compare sx (selector y) == Ordering.gt)
       let leftSorted := split.1.sortBy selector
       let rightSorted := split.2.sortBy selector
       leftSorted ++ x :: rightSorted
   termination_by sortBy _ ls => ls.length
   decreasing_by simp_wf; apply Nat.lt_succ_of_le; simp [partition_fst_length_le, partition_snd_length_le]
 
-  def sort [LT α] [DecidableRel (@LT.lt α _)] (ls:List α) := ls.sortBy_Filter id
+  def sort [Ord α] (ls:List α) := ls.sortBy id
 
   #eval [3,2,1].sort == [1,2,3]
 
@@ -212,7 +215,7 @@ namespace List
 
   #eval [0, 1, 2, 3].groupByFixed (fun a b => a/2 == b/2) == [[0,1],[2,3]]
 
-  def groupByEx [Inhabited (β × γ)] [BEq β] [LT β] [DecidableRel (@LT.lt β _)] (get:α → β × γ) (ls:List α) : List (β × List γ) :=
+  def groupByEx [Inhabited (β × γ)] [BEq β] [Ord β] (get:α → β × γ) (ls:List α) : List (β × List γ) :=
     ls
     |>.map get
     |>.sortBy (fun x => x.1)
@@ -220,8 +223,6 @@ namespace List
     |>.map (fun xs => (xs[0]!.1, xs.map Prod.snd))
 
   #eval [("a", 1), ("a", 2), ("b", 3)].groupByEx id = [("a", [1, 2]), ("b", [3])]
-  #eval [(["a"], 1), (["a"], 2), (["b"], 3)].groupByEx id = [(["a"], [1, 2]), (["b"], [3])]
-  #eval [([], 1), (["b", "a"], 3), (["a"], 2), (["b", "a"], 4)].groupByEx id = [([], [1]), (["a"], [2]), (["b", "a"], [3, 4])]
 
   theorem reverseAux_ne_nil_right {ls:List α} {rs:List α} (ne_nil:rs≠[])
     : List.reverseAux ls rs ≠ []
@@ -320,7 +321,18 @@ namespace List
     case cons => simp [Nat.succ_eq_add_one, Nat.add_sub_cancel, Nat.lt_succ_of_le]
 
   #eval windowed 0 [0, 1, 2] == [[], [], []]
+  #eval windowed 1 [0, 1, 2] == [[0], [1], [2]]
   #eval windowed 3 [1, 2, 3, 4, 5] == [[1, 2, 3], [2, 3, 4], [3, 4, 5]]
+
+  theorem foldr_expand {folder:α → β → β} {init:β} {head:α} {tail:List α}
+    : (head :: tail).foldr folder init = folder head (tail.foldr folder init)
+    := by rfl
+
+  theorem foldl_expand {folder:β → α → β} {init:β} {head:α} {tail:List α}
+    : (head :: tail).foldl folder init = tail.foldl folder (folder init head)
+    := by rfl
+
+  #eval ["a","b","c"].foldr (·++·) "" == ["a","b","c"].reverse.foldl (flip (·++·)) ""
 end List
 
 namespace Option
@@ -360,3 +372,23 @@ namespace Int
     simp [ngt, lt]
 
 end Int
+
+instance [Ord α] [Ord β] : Ord (Prod α β) where
+  compare a b :=
+    match Ord.compare a.1 b.1 with
+    | Ordering.eq => Ord.compare a.2 b.2
+    | x => x
+
+instance [Ord α] : Ord (List α) where
+  compare a b :=
+    let rec loop : List α → List α → Ordering
+      | a :: as, b :: bs =>
+        match Ord.compare a b with
+        | Ordering.eq => loop as bs
+        | x => x
+      
+      | [], [] => Ordering.eq
+      | [], _ => Ordering.lt
+      | _, [] => Ordering.gt
+    
+    loop a b
