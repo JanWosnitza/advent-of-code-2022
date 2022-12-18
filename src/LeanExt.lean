@@ -3,13 +3,13 @@ section Test
   class Test (α:Type) (β:Type) where
     get : α → β → IO Unit
 
-  instance [ToString β] : Test α β where
-    get (_) (result) := IO.println s!"Not solved. {result}"
-
   instance [Repr β] : Test α β where
     get (_) (result) := do
       IO.println "Not solved."
       IO.println (reprStr result)
+
+  instance [ToString β] : Test α β where
+    get (_) (result) := IO.println s!"Not solved.\n{result}"
 
   instance [BEq α] [ToString α] : Test α α where
     get (expected) (result) :=
