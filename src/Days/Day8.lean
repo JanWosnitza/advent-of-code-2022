@@ -23,7 +23,6 @@ theorem Tree.visibleOutside.loop_idempotent {t:Tree} {ts:List Tree}
   : visibleOutside.loop t ts = visibleOutside.loop t (visibleOutside.loop t ts)
   := by
   cases ts <;> simp [loop]
-  simp [loop]
   split <;> simp [loop, *] <;> apply loop_idempotent
 
 theorem Tree.visibleOutside_idempotent {ts:List Tree}
