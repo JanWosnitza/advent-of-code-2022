@@ -3,7 +3,20 @@ import LeanExt
 namespace Day2
 
 inductive RPS where | rock | paper | scissors
-deriving Inhabited
+deriving Inhabited, BEq
+
+def RPS.next : RPS → RPS
+  | rock => paper
+  | paper => scissors
+  | scissors => rock
+
+def RPS.prev : RPS → RPS := next ∘ next
+
+theorem RPS.next_eq (rps:RPS) : rps = rps.next.next.next := by
+  cases rps <;> simp [next]
+
+theorem RPS.next_eq_prev (rps:RPS) : rps.next = rps.prev.prev := by
+  cases rps <;> simp [prev, next]
 
 def RPS.points : RPS → Nat
   | rock => 1
@@ -14,30 +27,16 @@ inductive Result where | lose | draw | win
 deriving Inhabited
 
 open RPS in
-def Result.of : RPS → RPS → Result
-  | rock, scissors => lose
-  | rock, rock => draw
-  | rock, paper => win
-
-  | paper, rock => lose
-  | paper, paper => draw
-  | paper, scissors => win
-
-  | scissors, paper => lose
-  | scissors, scissors => draw
-  | scissors, rock => win
+def Result.of (l r:RPS) : Result :=
+  if l == r then draw
+  else if l.next == r then win
+  else lose
 
 open RPS in open Result in
-def Result.to : Result → RPS →RPS
-  | lose, rock => scissors
-  | lose, paper => rock
-  | lose, scissors => paper
-
-  | draw, x => x
-
-  | win, rock => paper
-  | win, paper => scissors
-  | win, scissors => rock
+def Result.to (l:RPS) : Result → RPS
+  | lose => l.prev
+  | draw => l
+  | win => l.next
 
 def Result.points : Result → Nat
   | lose => 0
