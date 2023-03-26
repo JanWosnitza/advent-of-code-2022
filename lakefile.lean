@@ -20,6 +20,7 @@ lean_lib Days.Day12
 lean_lib Days.Day13
 lean_lib Days.Day14
 lean_lib Days.Day15
+lean_lib Days.Day16
 lean_lib Days
 
 @[defaultTarget]

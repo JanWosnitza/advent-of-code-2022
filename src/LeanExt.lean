@@ -1,3 +1,4 @@
+import Std
 
 section Test
   class Test (α:Type) (β:Type) where
@@ -16,7 +17,8 @@ section Test
       if expected == result then
         IO.println "Hurray!!"
       else do
-        IO.println s!"Not solved expected"
+        IO.println "Not solved!"
+        IO.println "Expected"
         IO.println s!"{expected}"
         IO.println "but got"
         IO.println s!"{result}"
@@ -224,6 +226,16 @@ namespace List
 
   #eval [("a", 1), ("a", 2), ("b", 3)].groupByEx id = [("a", [1, 2]), ("b", [3])]
 
+  def distinct [BEq α] [Hashable α] (ls:List α) :=
+    let hm : Std.HashMap α Unit :=
+      ls
+      |>.map (·,())
+      |> Std.HashMap.ofList
+    hm.toList
+    |>.map (·.1)
+
+  #eval [1,1,0,1,2,0,3].distinct.sort = [0, 1, 2, 3]
+
   theorem reverseAux_ne_nil_right {ls:List α} {rs:List α} (ne_nil:rs≠[])
     : List.reverseAux ls rs ≠ []
     := by
@@ -392,3 +404,77 @@ instance [Ord α] : Ord (List α) where
       | _, [] => Ordering.gt
     
     loop a b
+
+inductive LeftistTree (α:Type) [Ord α] where
+  | leaf : LeftistTree α
+  | node : (value:α) → (rank:Nat) → (left:LeftistTree α) → (right:LeftistTree α) → LeftistTree α
+deriving Repr, Inhabited
+
+namespace LeftistTree
+  def empty [Ord α] : LeftistTree α := leaf
+
+  def single [Ord α] (value:α) : LeftistTree α := node value 1 leaf leaf
+
+  def isEmpty [Ord α] : LeftistTree α → Bool
+    | leaf => true
+    | _ => false
+
+  def rank [Ord α] : LeftistTree α → Nat
+    | leaf => 0
+    | node _ rank _ _ => rank
+
+  def count [Ord α] : LeftistTree α → Nat
+    | leaf => 0
+    | node _ _ l r => 1 + count l + count r
+
+  partial def merge [ord:Ord α] (ltree:LeftistTree α) (rtree:LeftistTree α) : LeftistTree α :=
+    match (ltree, rtree) with
+    | (leaf, _) => rtree
+    | (_, leaf) => ltree
+    | (node lv lrank ll lr, node rv rrank rl rr) =>
+      match ord.compare lv rv with
+      | Ordering.gt =>
+        let ltree' := merge rr ltree
+        if rrank > ltree'.rank then
+          node rv (lrank + 1) rl ltree'
+        else
+          node rv (rrank + 1) ltree' rl
+      | _ =>
+        let rtree' := merge lr rtree
+        if lrank > rtree'.rank then
+          node lv (rrank + 1) rtree' ll
+        else
+          node lv (lrank + 1) ll rtree'
+    /-
+    termination_by merge ltree rtree => ltree.count + rtree.count
+    decreasing_by
+      simp_wf
+      cases ltree <;> simp [count]
+      case leaf =>
+        have : 
+        cases rtree
+        case leaf => contradiction
+      sorry
+    -/
+
+  def put [Ord α] (value:α) (tree:LeftistTree α) :=
+    merge (single value) tree
+  
+  def peek? [Ord α] : LeftistTree α → Option α
+    | leaf => none
+    | node value _ _ _ => some value
+
+  def peek! [Inhabited α] [Ord α] : LeftistTree α → α
+    | leaf => panic! "tree is empty"
+    | node value _ _ _ => value
+
+  def take? [Ord α] : LeftistTree α → Option (α × LeftistTree α)
+    | leaf => none
+    | node value _ ltree rtree => some (value, merge ltree rtree)
+
+  def take! [Inhabited α] [Ord α] : LeftistTree α → (α × LeftistTree α)
+    | leaf => panic! "tree is empty"
+    | node value _ ltree rtree => (value, merge ltree rtree)
+end LeftistTree
+
+#eval LeftistTree.single 1 |>.put 0 |>.put 0 |>.put 0 |>.put 0 |>.put 0 |>.put 0 |>.take!

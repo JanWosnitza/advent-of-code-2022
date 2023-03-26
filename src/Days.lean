@@ -13,6 +13,7 @@ import Days.Day12
 import Days.Day13
 import Days.Day14
 import Days.Day15
+import Days.Day16
 
 structure Solution where
   day : Nat
@@ -63,4 +64,6 @@ def days : List Solution :=
   , solution 14 2 Day14.part2
   , solution 15 1 Day15.part1
   , solution 15 2 Day15.part2
+  , solution 16 1 Day16.part1
+  , solution 16 2 Day16.part2
   ]
