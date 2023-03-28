@@ -124,15 +124,15 @@ def part2 (ls:List String) : FlowRate :=
     |>.map (·.1)
     |>.sort
 
-  List.range relevantValveNames.length
+  List.range (relevantValveNames.length + 1 / 2) -- divide by 2 because of symmetry when choosing subsets
   |>.map (fun n =>
     relevantValveNames
     |>.allSubsetsN n
     |>.map (fun (valveNames:List ValveName) =>
       (valveNames, relevantValveNames.removeAll valveNames)
     )
-    |>.map (fun (myVales, elephantsValves) =>
-      getBestFlowRate myVales + getBestFlowRate elephantsValves
+    |>.map (fun (myValves, elephantsValves) =>
+      getBestFlowRate myValves + getBestFlowRate elephantsValves
     )
     |>.maximum?
     |>.get!

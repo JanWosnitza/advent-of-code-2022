@@ -3,11 +3,16 @@ import Days
 def Solution.print (solution:Solution) := do
   IO.println s!"Day{solution.day}.part{solution.part}"
 
-  (← IO.FS.lines s!"input/day{solution.day}.txt")
-  |>.foldr List.cons []
-  |> solution.f
-  |> solution.toString.toString
-  |> IO.println
+  let arrLines ← IO.FS.lines s!"input/day{solution.day}.txt"
+  let lines := arrLines.foldr List.cons []
+
+  let startTime ←  IO.monoMsNow
+  let result := solution.f lines
+  let endTime ←  IO.monoMsNow
+
+  let strResult := solution.toString.toString result
+  IO.println strResult
+  IO.println s!"time = {endTime - startTime}ms"
 
 def test day part := days |> List.find? (fun (s:Solution) => s.day = day && s.part = part)
 
