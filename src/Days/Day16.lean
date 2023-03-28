@@ -44,9 +44,12 @@ end Parse
 abbrev Minutes := Nat
 abbrev FlowRate := Nat
 
-partial def findShortestDistance (caves:Caves) (start:ValveName) : List (ValveName × Minutes) :=
-  let rec loop (minute:Minutes) (closedSet:Std.HashMap ValveName Minutes) : List ValveName → List (ValveName × Minutes)
-    | [] => closedSet.toList
+-- Dijkstra's algorithm & saving iteration count
+partial def findDistancesToAll (caves:Caves) (start:ValveName) : Std.HashMap ValveName Minutes :=
+  loop 0 Std.HashMap.empty [start]
+  where
+  loop (minute:Minutes) (closedSet:Std.HashMap ValveName Minutes)
+    | [] => closedSet
     | openSet =>
       let closedSet := openSet.foldl (·.insert · minute) closedSet
 
@@ -55,61 +58,87 @@ partial def findShortestDistance (caves:Caves) (start:ValveName) : List (ValveNa
       |>.filter (!closedSet.contains ·)
       |> loop (minute + 1) closedSet
 
-  [start]
-  |> loop 0 Std.HashMap.empty
+partial def getBestFlowRate
+  (getDistance:ValveName × ValveName → Minutes)
+  (getValveRate:ValveName → ValveRate)
+  (relevantValves:List ValveName)
+  (minutesLeft:Minutes)
+  (currentValveName:ValveName)
+  : FlowRate :=
+  loop 0 [] minutesLeft currentValveName
+  where
+    loop (totalFlowRate:FlowRate) (visitedValves:List ValveName) (minutesLeft:Minutes) (currentValveName:ValveName) : FlowRate :=
+      relevantValves
+      |>.filter (!visitedValves.contains ·)
+      |>.map (fun valveName =>
+        let distance := getDistance (currentValveName, valveName)
+        let minutesLeft := minutesLeft - (distance + 1)
 
-partial def partX (workers:List Minutes) (ls:List String) :=
+        if minutesLeft = 0 then
+          totalFlowRate
+        else
+          loop
+            (totalFlowRate + getValveRate valveName * minutesLeft)
+            (valveName :: visitedValves)
+            minutesLeft
+            valveName
+      )
+      |>.foldl max totalFlowRate
+
+def mkGetBestFlowRate (caves:Caves) : Minutes → ValveName → List ValveName → FlowRate :=
+  let shortestDistances : Std.HashMap (ValveName × ValveName) Minutes :=
+    caves.toList
+    |>.map (·.1)
+    |>.bind (fun (sourceValveName:ValveName) =>
+      sourceValveName
+      |> findDistancesToAll caves
+      |>.toList
+      |>.map (fun (targetValveName, minutes) => ((sourceValveName, targetValveName), minutes) )
+    )
+    |> Std.HashMap.ofList
+
+  let getDistance := shortestDistances.find!
+  let getValveFlowRate := (caves.find! · |>.flowRatePerMinute)
+  let get := getBestFlowRate getDistance getValveFlowRate
+  fun minutes current relevantValves => get relevantValves minutes current
+
+def part1 (ls:List String) :=
   let caves := ls |> Parse.input!
 
-  let interestingValveNames :=
+  let getBestFlowRate := mkGetBestFlowRate caves 30 "AA"
+
+  caves.toList
+  |>.filter (·.2.flowRatePerMinute > 0)
+  |>.map (·.1)
+  |>.sort
+  |> getBestFlowRate
+
+def part2 (ls:List String) : FlowRate :=
+  let caves := ls |> Parse.input!
+
+  let getBestFlowRate := mkGetBestFlowRate caves 26 "AA"
+
+  let relevantValveNames :=
     caves.toList
     |>.filter (·.2.flowRatePerMinute > 0)
     |>.map (·.1)
     |>.sort
 
-  let shortestDistances : Std.HashMap (ValveName × ValveName) Minutes :=
-    ("AA" :: interestingValveNames)
-    |>.bind (fun (sourceValveName:ValveName) =>
-      sourceValveName
-      |> findShortestDistance caves
-      |>.filter (interestingValveNames.contains ·.1)
-      |>.map (fun (targetValveName, minutes) => ((sourceValveName, targetValveName), minutes) )
+  List.range relevantValveNames.length
+  |>.map (fun n =>
+    relevantValveNames
+    |>.allSubsetsN n
+    |>.map (fun (valveNames:List ValveName) =>
+      (valveNames, relevantValveNames.removeAll valveNames)
     )
-    |> Std.HashMap.ofList
-
-  let rec loop (totalFlowRate:FlowRate) (visitedValves:List ValveName) : List (Minutes × ValveName) → FlowRate
-    | (minutesLeft, currentValveName) :: restValveNames =>
-      interestingValveNames
-      |>.filter (!visitedValves.contains ·)
-      |>.map (fun valveName =>
-        let minutesMeContinue :=
-          let cave := caves.find! valveName
-          let distance := shortestDistances.find! (currentValveName, valveName)
-          let minutesLeft := minutesLeft - (distance + 1)
-
-          if minutesLeft = 0 then
-            -- this worker is done
-            totalFlowRate
-          else
-            loop
-              (totalFlowRate + cave.flowRatePerMinute * minutesLeft)
-              (valveName :: visitedValves)
-              ((minutesLeft, valveName) :: restValveNames)
-
-        let minutesMeStop := loop totalFlowRate visitedValves restValveNames
-
-        max minutesMeContinue minutesMeStop
-      )
-      |>.foldl max totalFlowRate
-    | _ => totalFlowRate
-  
-  workers
-  |>.map (·, "AA")
-  |> loop 0 []
-
-partial def part1 := partX [30]
-
-partial def part2 := partX [26, 26]
+    |>.map (fun (myVales, elephantsValves) =>
+      getBestFlowRate myVales + getBestFlowRate elephantsValves
+    )
+    |>.maximum?
+    |>.get!
+  )
+  |>.maximum?
+  |>.get!
 
 def testInput :=
   [ "Valve AA has flow rate=0; tunnels lead to valves DD, II, BB"

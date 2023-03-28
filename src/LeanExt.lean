@@ -345,6 +345,30 @@ namespace List
     := by rfl
 
   #eval ["a","b","c"].foldr (·++·) "" == ["a","b","c"].reverse.foldl (flip (·++·)) ""
+
+  partial def allPermutations : List α → List (List α)
+    | [] => []
+    | ls => loop [] [] [] ls
+    where
+      loop (add:List α) (acc:List (List α))
+        | [], [] => add :: acc
+        | _, [] => acc
+        | seen, l :: ls =>
+          let acc := loop (l :: add) acc [] (seen ++ ls)
+          loop add acc (l :: seen) ls
+
+  partial def allSubsetsN (n:Nat) (ls:List α) : List (List α) :=
+    loop [] [] n ls
+    where
+      loop (add:List α) (acc:List (List α))
+        | 0, _ => add :: acc
+        | _, [] => acc
+        | n, l :: ls =>
+          let acc := loop (l :: add) acc (n - 1) ls
+          if ls.length < n then
+            acc
+          else
+            loop add acc n ls
 end List
 
 namespace Option
